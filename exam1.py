@@ -4,7 +4,7 @@ from time import time
 from urllib.parse import urlparse
 from uuid import uuid4
 
-from flask import Flask, render_template, request, redirect, jsonify, session
+from flask import Flask, render_template, request, redirect, jsonify, session, url_for
 import pymysql
 import bcrypt
 import config
@@ -132,12 +132,12 @@ blockchain = Blockchain()
 # 처음 index 시작 ----------------------------------------
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('bexam.html')
 
 # 상단 메뉴바 href ----------------------------------------
 @app.route('/logo_index')
 def logo_index():
-    return render_template('index.html')
+    return render_template('bexam.html')
 
 @app.route('/teamplay')
 def teamplay():
@@ -176,7 +176,7 @@ def login():
                 session['name'] = name
                 session['email'] = email
                 session['mile'] = mile
-                return redirect('/mypage')
+                return redirect('/exam')
             else: # 비밀번호가 일치하지 않는다면
                 return redirect('/loginpage')
         else:
@@ -186,7 +186,7 @@ def login():
 @app.route('/logout')
 def logout():
     session.clear()
-    return render_template('index.html')
+    return render_template('bexam.html')
 
 @app.route('/registerpage')
 def regit():
@@ -233,7 +233,7 @@ def mine():
     blockchain.new_transaction(
         sender=f"{session['name']}",
         recipient=node_identifier,
-        amount=1,
+        amount=1
     )
 
     previous_hash = blockchain.hash(last_block)
@@ -245,6 +245,14 @@ def mine():
         'transactions': block['transactions'],
         'proof': block['proof'],
         'previous_hash': block['previous_hash'],
+        'context':"https://www.w3.org/ns/did/v1",
+        'id':"did:btcr:123456789abcdefghi",
+        'authentication':[{
+        "id": "did:btcr:123456789abcdefghi#keys-1",
+        "type": "Ed25519VerificationKey2020",
+        "controller": "did:btcr:123456789abcdefghi",
+        "publicKeyMultibase": "zH3C2AVvLMv6gmMNam3uVAjZpfkcJCwDwnZn6z3wXmqPV"
+        }]
     }
     return jsonify(response), 200
 
@@ -310,6 +318,16 @@ def consensus():
 
     return jsonify(response), 200
 
+# exam
+@app.route('/exam')
+def exam():
+    return render_template('bexam.html')
+
+# seoul
+@app.route('/seoul')
+def seoul():
+    return render_template('bseoul.html')
+
 if __name__ == '__main__':
     from argparse import ArgumentParser
 
@@ -320,5 +338,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
     port = args.port
 
-    app.run(host='127.0.0.1', port=port)
+    app.run(host='127.0.0.1', port=port,debug=True)
 #---------------------------------------------------------

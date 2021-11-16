@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
 
-    <title>세종인</title>
+    <title>블록체인프로젝트</title>
 
     <!-- favicon 아이콘 참조-->
     <link rel="shortcut icon" href="../static/assets/img/favicon.ico">
@@ -147,30 +147,30 @@
         style="border-bottom : 0.001px solid rgb(216, 216, 216)">
         <div class="container">
             <!-- 로고-->
-            <a class="navbar-brand js-scroll-trigger" href="/logo_index"><img src="../static/assets/img/logo.png"
-                    style="width:12rem; height:3rem;"></a>
+            {% block logo %}
+            {% endblock %}
             <!-- 메뉴버튼-->
 
             <div class="collapse navbar-collapse">
                 {% if 'email' not in session %}
                 <ul class="navbar-nav ml-auto">
-                    <li class="nav-item">
+                    <!-- <li class="nav-item">
                         <a class="nav-link js-scroll-trigger" onclick="document.getElementById('id01').style.display='block'" style="font-size:1.3rem;">팀원구하기</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link js-scroll-trigger" onclick="document.getElementById('id01').style.display='block'" style="font-size:1.3rem;">재능공유</a></li>
                     <li class="nav-item">
-                        <a class="nav-link js-scroll-trigger" onclick="document.getElementById('id01').style.display='block'" style="font-size:1.3rem;">마이페이지</a></li>
+                        <a class="nav-link js-scroll-trigger" onclick="document.getElementById('id01').style.display='block'" style="font-size:1.3rem;">마이페이지</a></li> -->
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="/loginpage" style="font-size:1.3rem;">로그인</a></li>
                 </ul>
                 {% else %}
                 <ul class="navbar-nav ml-auto">
-                    <li class="nav-item"><a class="nav-link js-scroll-trigger " href="/teamplay"
+                    <!-- <li class="nav-item"><a class="nav-link js-scroll-trigger " href="/teamplay"
                             style="font-size:1.3rem;">팀원구하기</a></li>
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="/outsourcing"
                             style="font-size:1.3rem;">재능공유</a></li>
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="/mypage"
-                            style="font-size:1.3rem;">마이페이지</a></li>
+                            style="font-size:1.3rem;">마이페이지</a></li> -->
                     <li class="nav-item"><a class="nav-link js-scroll-trigger" href="/logout"
                             style="font-size:1.3rem;">로그아웃</a></li>
                 </ul>
@@ -186,8 +186,9 @@
     <!-- footer-->
     <footer class="bg-light" style="border-top : 0.001px solid rgb(216, 216, 216)">
         <div class="container" style="padding:3rem; ">
-            <img src="../static/assets/img/logo.png" style="width:10rem; height:2.7rem; margin: 0 auto;">
-            <span style="margin-left:3rem">Copyright. 2020. SENAGAE. ALL RIGHTS RESERVED.</span>
+            {% block endlogo %}
+            {% endblock %}
+            <span style="margin-left:3rem">Copyright. 2020. DEJAVU. ALL RIGHTS RESERVED.</span>
         </div>
     </footer>
 
