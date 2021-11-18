@@ -10,8 +10,6 @@ import bcrypt
 import config
 from pip._vendor import requests
 
-app = Flask(__name__)
-app.secret_key = b'1234wqerasdfzxcv'
 db = pymysql.connect(host='localhost',port=3306,user='root',passwd=config.password,db='hackaton',charset='utf8') # db 접속 본인 환경맞춰 설정
 cursor = db.cursor() # 객체에 담기
 
@@ -126,18 +124,23 @@ class Blockchain:
         return guess_hash[:4] == "0000"
 
 app = Flask(__name__)
+app.config.from_object(__name__)
+app.config.update(
+    SESSION_COOKIE_NAME = 'session_exam2',
+    # SESSION_COOKIE_PATH = '/exam2/'
+)
 node_identifier = str(uuid4()).replace('-', '')
 blockchain = Blockchain()
 
 # 처음 index 시작 ----------------------------------------
 @app.route('/')
 def index():
-    return render_template('bexam.html')
+    return render_template('bseoul.html')
 
 # 상단 메뉴바 href ----------------------------------------
 @app.route('/logo_index')
 def logo_index():
-    return render_template('bexam.html')
+    return render_template('bseoul.html')
 
 @app.route('/teamplay')
 def teamplay():
@@ -176,7 +179,7 @@ def login():
                 session['name'] = name
                 session['email'] = email
                 session['mile'] = mile
-                return redirect('/exam')
+                return redirect('/seoul')
             else: # 비밀번호가 일치하지 않는다면
                 return redirect('/loginpage')
         else:
@@ -186,7 +189,7 @@ def login():
 @app.route('/logout')
 def logout():
     session.clear()
-    return render_template('bexam.html')
+    return render_template('bseoul.html')
 
 @app.route('/registerpage')
 def regit():

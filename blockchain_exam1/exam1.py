@@ -11,7 +11,12 @@ import config
 from pip._vendor import requests
 
 app = Flask(__name__)
-app.secret_key = b'1234wqerasdfzxcv'
+app.config.from_object(__name__)
+app.config.update(
+    SESSION_COOKIE_NAME = 'session_exam1',
+    # SESSION_COOKIE_PATH = '/exam1/'
+)
+
 db = pymysql.connect(host='localhost',port=3306,user='root',passwd=config.password,db='hackaton',charset='utf8') # db 접속 본인 환경맞춰 설정
 cursor = db.cursor() # 객체에 담기
 
@@ -125,7 +130,6 @@ class Blockchain:
         # 첫 4개가 0이 되어야만 통과
         return guess_hash[:4] == "0000"
 
-app = Flask(__name__)
 node_identifier = str(uuid4()).replace('-', '')
 blockchain = Blockchain()
 
@@ -163,7 +167,7 @@ def login():
         login_info = request.form
         email = login_info['email']
         password = login_info['password']
-        print(email + password)
+        # print(email + password)
         sql = "SELECT * FROM Userinfo WHERE email = %s"
         rows_count = cursor.execute(sql , email)
         if rows_count > 0:
@@ -230,6 +234,7 @@ def mine():
     last_block = blockchain.last_block
     proof = blockchain.proof_of_work(last_block)
     
+    ## new_transaction 고치기
     blockchain.new_transaction(
         sender=f"{session['name']}",
         recipient=node_identifier,
@@ -239,6 +244,7 @@ def mine():
     previous_hash = blockchain.hash(last_block)
     block = blockchain.new_block(proof, previous_hash)
     
+    ## response 고치기
     response = {
         'message': "New Block Forged",
         'index': block['index'],
@@ -254,7 +260,8 @@ def mine():
         "publicKeyMultibase": "zH3C2AVvLMv6gmMNam3uVAjZpfkcJCwDwnZn6z3wXmqPV"
         }]
     }
-    return jsonify(response), 200
+    # return jsonify(response), 200
+    return redirect(url_for('issuance'))
 
 @app.route('/transactions/new')
 def new_transaction():
@@ -327,6 +334,11 @@ def exam():
 @app.route('/seoul')
 def seoul():
     return render_template('bseoul.html')
+
+# 발급완료 페이지
+@app.route('/issuance')
+def issuance():
+    return render_template('issuance.html',blockchain=blockchain.chain)
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
