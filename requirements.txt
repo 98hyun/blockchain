@@ -2,3 +2,4 @@ pymysql
 flask==1.1.2
 bcrypt
 cryptography
+pycryptodome

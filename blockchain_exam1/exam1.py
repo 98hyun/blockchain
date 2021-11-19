@@ -10,6 +10,8 @@ import bcrypt
 import config
 from pip._vendor import requests
 
+from Crypto.PublicKey import RSA
+
 app = Flask(__name__)
 app.config.from_object(__name__)
 app.config.update(
@@ -95,10 +97,21 @@ class Blockchain:
         return block
     
     def new_transaction(self, sender, recipient, amount):
+        key = RSA.generate(2048)
+        private_key = key.export_key()
+        file_out = open(f"../private/{sender}_private.pem", "wb")
+        file_out.write(private_key)
+        file_out.close()
+
+        public_key = key.publickey().export_key()
+        file_out = open(f"../public/{sender}_receiver.pem", "wb")
+        file_out.write(public_key)
+        file_out.close()
         self.current_transactions.append({
                     'sender': sender,
                     'recipient': recipient,
                     'amount': amount,
+                    'public_key':str(public_key)
                 })
         return self.last_block['index'] + 1
 
@@ -251,14 +264,6 @@ def mine():
         'transactions': block['transactions'],
         'proof': block['proof'],
         'previous_hash': block['previous_hash'],
-        'context':"https://www.w3.org/ns/did/v1",
-        'id':"did:btcr:123456789abcdefghi",
-        'authentication':[{
-        "id": "did:btcr:123456789abcdefghi#keys-1",
-        "type": "Ed25519VerificationKey2020",
-        "controller": "did:btcr:123456789abcdefghi",
-        "publicKeyMultibase": "zH3C2AVvLMv6gmMNam3uVAjZpfkcJCwDwnZn6z3wXmqPV"
-        }]
     }
     # return jsonify(response), 200
     return redirect(url_for('issuance'))

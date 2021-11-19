@@ -22,8 +22,8 @@
         <div class="container text-center">
             <img src="../static/assets/img/seoulbg.jpg" style="width:100%;">
             {% if 'email' in session %}
-            <button style="width:200px;height:60px;background-color: #4D51F9;color: white;box-shadow: 0 4px 16px rgba(86, 42, 247, 0.3);font-size: 40px;font-weight: bold;border-radius: 20px;position: absolute;top: 50%;left:50%;transform: translate(-50%,50%);transition: 0.3s;text-align: center;">
-                DID 검증
+            <button style="width:300px;height:60px;background-color: #4D51F9;color: white;box-shadow: 0 4px 16px rgba(86, 42, 247, 0.3);font-size: 40px;font-weight: bold;border-radius: 20px;position: absolute;top: 50%;left:50%;transform: translate(-50%,50%);transition: 0.3s;text-align: center;" onclick="location.href='http://localhost:5001/verify'">
+                수험표 확인
             </button>
             {% endif %}
         </div>

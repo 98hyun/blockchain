@@ -4,11 +4,15 @@ from time import time
 from urllib.parse import urlparse
 from uuid import uuid4
 
-from flask import Flask, render_template, request, redirect, jsonify, session, url_for
+from flask import Flask, render_template, request, redirect, jsonify, session, url_for, flash
 import pymysql
 import bcrypt
 import config
 from pip._vendor import requests
+
+from Crypto.PublicKey import RSA
+from Crypto.Random import get_random_bytes
+from Crypto.Cipher import AES, PKCS1_OAEP
 
 db = pymysql.connect(host='localhost',port=3306,user='root',passwd=config.password,db='hackaton',charset='utf8') # db 접속 본인 환경맞춰 설정
 cursor = db.cursor() # 객체에 담기
@@ -166,21 +170,63 @@ def login():
         login_info = request.form
         email = login_info['email']
         password = login_info['password']
-        print(email + password)
         sql = "SELECT * FROM Userinfo WHERE email = %s"
         rows_count = cursor.execute(sql , email)
         if rows_count > 0:
             user_info = cursor.fetchone() # 일치하는 정보 객체에 담기
             name = user_info[3] 
             mile = user_info[7] 
+
+            data = "I met aliens in UFO. Here is the map.".encode("utf-8")
+            # data는 나중에 user_info에 모든 문자열들을 합친것으로 대체 해도 괜찮을 것 같다.
+            # temp의 역할은 개인 단말의 찌꺼기 폴더
+            file_out = open("../temp/encrypted_data.bin", "wb")
+
+            recipient_key = RSA.import_key(open("../public/receiver.pem").read())
+            session_key = get_random_bytes(16)
+
+            # Encrypt the session key with the public RSA key
+            cipher_rsa = PKCS1_OAEP.new(recipient_key)
+            enc_session_key = cipher_rsa.encrypt(session_key)
+
+            # Encrypt the data with the AES session key
+            cipher_aes = AES.new(session_key, AES.MODE_EAX)
+            ciphertext, tag = cipher_aes.encrypt_and_digest(data)
+            [ file_out.write(x) for x in (enc_session_key, cipher_aes.nonce, tag, ciphertext) ]
+            file_out.close()        
+
+            file_in = open("../temp/encrypted_data.bin", "rb")
+
+            private_key = RSA.import_key(open("../private/private.pem").read())
+
+            enc_session_key, nonce, tag, ciphertext = \
+            [ file_in.read(x) for x in (private_key.size_in_bytes(), 16, 16, -1) ]
+
+            # Decrypt the session key with the private RSA key
+            cipher_rsa = PKCS1_OAEP.new(private_key)
+            session_key = cipher_rsa.decrypt(enc_session_key)
+
+            # Decrypt the data with the AES session key
+            cipher_aes = AES.new(session_key, AES.MODE_EAX, nonce)
+            data2 = cipher_aes.decrypt_and_verify(ciphertext, tag)
+            # if data==data2:
+            #     print('verify')
+            # else:
+            #     print('denied')
+                # print(data.decode("utf-8"))
+
             is_pw_correct = bcrypt.checkpw(password.encode('UTF-8') , user_info[2].encode('UTF-8')) # 패스워드 맞는지 확인
-            if is_pw_correct: # 일치하게되면
+            if is_pw_correct and data==data2: # 일치하게되면
                 # email 이라는 세션을 저장
                 session['name'] = name
                 session['email'] = email
                 session['mile'] = mile
-                return redirect('/seoul')
-            else: # 비밀번호가 일치하지 않는다면
+                flash('verify!')
+                return redirect('/verify')
+            elif is_pw_correct and data!=data2: # 비밀번호가 일치하지 않는다면
+                flash('denied!')
+                return redirect('/loginpage')
+            else:
                 return redirect('/loginpage')
         else:
             print('User does not exist')
@@ -321,15 +367,9 @@ def consensus():
 
     return jsonify(response), 200
 
-# exam
-@app.route('/exam')
-def exam():
-    return render_template('bexam.html')
-
-# seoul
-@app.route('/seoul')
-def seoul():
-    return render_template('bseoul.html')
+@app.route('/verify')
+def verify():
+    return render_template('verify.html',data=session)
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
