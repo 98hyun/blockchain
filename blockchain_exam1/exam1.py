@@ -4,7 +4,7 @@ from time import time
 from urllib.parse import urlparse
 from uuid import uuid4
 
-from flask import Flask, render_template, request, redirect, jsonify, session, url_for
+from flask import Flask, render_template, request, redirect, jsonify, session, url_for, json
 import pymysql
 import bcrypt
 import config
@@ -12,11 +12,17 @@ from pip._vendor import requests
 
 from Crypto.PublicKey import RSA
 
+import string
+import random
+def id_generator(size=6, chars=string.ascii_lowercase + string.digits):
+    return ''.join(random.choice(chars) for _ in range(size))
+
 app = Flask(__name__)
 app.config.from_object(__name__)
 app.config.update(
     SESSION_COOKIE_NAME = 'session_exam1',
-    # SESSION_COOKIE_PATH = '/exam1/'
+    # SESSION_COOKIE_PATH = '/exam1/',
+    # JSONIFY_PRETTYPRINT_REGULAR=True
 )
 
 db = pymysql.connect(host='localhost',port=3306,user='root',passwd=config.password,db='hackaton',charset='utf8') # db 접속 본인 환경맞춰 설정
@@ -83,35 +89,50 @@ class Blockchain:
             return True
         return False
 
-    def new_block(self, proof, previous_hash):
+    def new_block(self, proof, previous_hash, public_key=None):
+        
         block = {
-            'index': len(self.chain) + 1,
-            'timestamp': time(),
-            'transactions': self.current_transactions,
-            'proof': proof,
-            'previous_hash': previous_hash or self.hash(self.chain[-1]),
-        }
+                    'index': len(self.chain) + 1,
+                    'timestamp': time(),
+                    'transactions': self.current_transactions,
+                    'proof': proof,
+                    'previous_hash': previous_hash or self.hash(self.chain[-1]),
+                }
+        if public_key is not None:
+            block = {
+                'index': len(self.chain) + 1,
+                'timestamp': time(),
+                'transactions': self.current_transactions,
+                'proof': proof,
+                'previous_hash': previous_hash or self.hash(self.chain[-1]),
+                'did': {
+                    "@context": "http://www.w3.org/ns/did/v1",
+                    "id": f"did:example:{id_generator(size=18)}",
+                    "authentication": [{
+                        "id": f"did:example:{id_generator(size=18)}#keys-{len(self.chain) + 1}",
+                        "type": f"{id_generator(size=6)}VerificationKey2021",
+                        "publicKey": f"{str(public_key)}"
+                        }],
+                    "service": [{
+                        "id":f"did:example:{id_generator(size=18)}#vcs",
+                        "type": "VerifiableCredentialService",
+                        "serviceEndpoint": "http://localhost:5001/verify",
+                        }]
+                        }
+                        }
 
         self.current_transactions = [] 
         self.chain.append(block)
         return block
     
-    def new_transaction(self, sender, recipient, amount):
-        key = RSA.generate(2048)
-        private_key = key.export_key()
-        file_out = open(f"../private/{sender}_private.pem", "wb")
-        file_out.write(private_key)
-        file_out.close()
+    def new_transaction(self, sender, recipient, amount, public_key):
+        ## http://wiki.hash.kr/index.php/DIDs
 
-        public_key = key.publickey().export_key()
-        file_out = open(f"../public/{sender}_receiver.pem", "wb")
-        file_out.write(public_key)
-        file_out.close()
         self.current_transactions.append({
                     'sender': sender,
                     'recipient': recipient,
                     'amount': amount,
-                    'public_key':str(public_key)
+                    'public_key':str(public_key),
                 })
         return self.last_block['index'] + 1
 
@@ -247,15 +268,27 @@ def mine():
     last_block = blockchain.last_block
     proof = blockchain.proof_of_work(last_block)
     
+    key = RSA.generate(2048)
+    private_key = key.export_key()
+    file_out = open(f"../private/{session['name']}_private.pem", "wb")
+    file_out.write(private_key)
+    file_out.close()
+
+    public_key = key.publickey().export_key()
+    file_out = open(f"../public/{session['name']}_receiver.pem", "wb")
+    file_out.write(public_key)
+    file_out.close()
+
     ## new_transaction 고치기
     blockchain.new_transaction(
         sender=f"{session['name']}",
         recipient=node_identifier,
-        amount=1
+        amount=1,
+        public_key=str(public_key),
     )
 
     previous_hash = blockchain.hash(last_block)
-    block = blockchain.new_block(proof, previous_hash)
+    block = blockchain.new_block(proof, previous_hash, public_key)
     
     ## response 고치기
     response = {
@@ -343,7 +376,7 @@ def seoul():
 # 발급완료 페이지
 @app.route('/issuance')
 def issuance():
-    return render_template('issuance.html',blockchain=blockchain.chain)
+    return render_template('issuance.html',blockchain=json.dumps(blockchain.chain[-1],sort_keys = True, indent = 4, separators = (',', ': ')))
 
 if __name__ == '__main__':
     from argparse import ArgumentParser

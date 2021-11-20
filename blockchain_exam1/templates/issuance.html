@@ -6,17 +6,31 @@
         display: block;
         margin-left: auto;
         margin-right: auto;
-        width: 50%;
-        width: 30%;
+        width: 24%;
         height: auto;
     }   
 </style>
+<!-- 1번 대안 -->
+<!-- <html> -->
+    <!-- <meta http-equiv="refresh" content="5; url=http://localhost:5000/"> -->
+    <!-- <div>
+        <h2>발급완료</h2>
+        <img src="../static/assets/img/jo.png" alt="조희연 교육감" class='center'>
+        
+        <pre id="json"></pre>
+    </div>
+    <script>
+        const jsonfile = JSON.parse('{{ blockchain | safe }}');
+        console.log(jsonfile);
+        document.getElementById("json").innerHTML = JSON.stringify(jsonfile, undefined, 4);
+      </script>
+</html> -->
+
 <html>
     <meta http-equiv="refresh" content="5; url=http://localhost:5000/">
     <div>
-        
         <h2>발급완료</h2>
         <img src="../static/assets/img/jo.png" alt="조희연 교육감" class='center'>
-        {{blockchain[-1]}}
+        {{ blockchain }}
     </div>
 </html>
