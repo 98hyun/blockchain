@@ -11,17 +11,20 @@
         width: 30%;
         height: auto;
     }
-    tr,td{
+
+    tr,
+    td {
         padding: 15px;
         border-spacing: 0px;
         text-align: center;
     }
+
     .backslash {
         background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg"><line x1="0" y1="0" x2="100%" y2="100%" stroke="gray" /></svg>');
     }
 </style>
 <html>
-<meta http-equiv="refresh" content="10; url=http://localhost:5001/">
+<!-- <meta http-equiv="refresh" content="10; url=http://localhost:5001/"> -->
 <div>
 
     {% for message in get_flashed_messages() %}
@@ -29,64 +32,66 @@
     {% endfor %}
     <h2>수험표 확인</h2>
     <!-- <img src="../static/assets/img/jo.png" alt="조희연 교육감" class='center'> -->
-    <table border="1" bordercolor="black" width="1000" height="300" align="center" style="border-spacing: 0px;">
+    <table border="1" bordercolor="black" width="1000" height="auto" align="center" style="border-spacing: 0px;white-space: nowrap;">
         <tr>
-            <td><b>수험번호</b></td>
-            <td colspan="2"><b>성명</b></td>
-            <td><b>생년월일</b></td>
-            <td><b>성별</b></td>
-            <td colspan="3"><b>출신고교 (반 또는 졸업년도)</b></td>
+            <td class="tg-7lbl" colspan="7" rowspan="3" style="padding:0px 150px;">2022학년도 대학수학능력시험<br><span
+                    style="font-weight:bold;font-size: 33px;">수&nbsp;&nbsp;험&nbsp;&nbsp;표</span></td>
+            <td class="tg-tki1" colspan="7" rowspan="2"><span style="font-weight:bold">시험시간표</span></td>
+            <td class="tg-lboi" colspan="4" rowspan="8" style="text-align: left;">수험번호 : 29040507
+                (홀수형)<br>성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명 :
+                황&nbsp;&nbsp;창&nbsp;&nbsp;현<br>1&nbsp;&nbsp;&nbsp;교&nbsp;&nbsp;시 : 국어 - 화법과
+                작문<br>2&nbsp;&nbsp;&nbsp;교&nbsp;&nbsp;시 : 수학 - 확률과 통계<br>3&nbsp;&nbsp;&nbsp;교&nbsp;&nbsp;시 :
+                영어<br>4&nbsp;&nbsp;&nbsp;교&nbsp;&nbsp;시 : 한국사, 과학탐구<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;제&nbsp;&nbsp;1선택 :
+                물리I<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;제&nbsp;&nbsp;2선택 : 생명과학I<br>5&nbsp;&nbsp;&nbsp;교&nbsp;&nbsp;시 :
+                -<br>시험장소 : 세종고등학교</td>
         </tr>
         <tr>
-            <td>20211119</td>
-            <td colspan="2">{{session['name']}}</td>
-            <td>19981203</td> <!-- session['birth']-->
-            <td>{{session['sex']}}</td> <!-- session['sex']-->
-            <td colspan="3">서울한영고등학교</td>
         </tr>
         <tr>
-            <td><b>영역</b></td>
-            <td>한국사</td>
-            <td>국어</td>
-            <td>수학</td>
-            <td>영어</td>
-            <td colspan="2">탐구</td>
-            <td>제2외국어/한문</td>
+            <td class="tg-9wq8">교시</td>
+            <td class="tg-9wq8" colspan="2" style="padding:0px 10px;">시&nbsp;&nbsp;간</td>
+            <td class="tg-9wq8" colspan="4" style="padding:0px 10px;">영&nbsp;&nbsp;역</td>
         </tr>
         <tr>
-            <td><b>선택과목</b></td>
-            <td rowspan="3" align="center" class="backslash"></td>
-            <td>화법과 작문</td> <!-- session or database -->
-            <td>확률과 통계</td>
-            <td rowspan="3" align="center" class="backslash"></td>
-            <td>생활과 윤리</td>
-            <td>지구과학1</td>
-            <td>독일어1</td>
+            <td class="tg-9wq8" colspan="3" rowspan="7"><img src="https://ifh.cc/g/TkBchB.jpg" width="auto" height="200">
+            </td>
+            <td class="tg-9wq8" colspan="2" style="text-align: center;height:40;width: auto;">접수번호</td>
+            <td class="tg-9wq8" colspan="2" style="height:40;width: auto;">211121</td>
+            <td class="tg-9wq8">1</td>
+            <td class="tg-9wq8" colspan="2" style="padding:0px 10px;">08:40~10:00<br>(80분)</td>
+            <td class="tg-9wq8" colspan="4" style="padding:0px 10px;">국&nbsp;&nbsp;어</td>
         </tr>
         <tr>
-            <td><b>표준점수</b></td>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td rowspan="2" align="center" class="backslash"></td>
+            <td class="tg-t4zm" colspan="4" style="height:40;width: auto;">성 명</td>
+            <td class="tg-9wq8">2</td>
+            <td class="tg-9wq8" colspan="2" style="padding:0px 10px;">10:30~12:10<br>(100분)</td>
+            <td class="tg-9wq8" colspan="4" style="padding:0px 10px;">수&nbsp;&nbsp;학</td>
         </tr>
         <tr>
-            <td><b>백분위</b></td>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
+            <td class="tg-t4zm" colspan="4" rowspan="2" style="height:40;width: auto;"><span style="font-weight:bold">황창현</span></td>
+            <td class="tg-9wq8">3</td>
+            <td class="tg-9wq8" colspan="2" style="padding:0px 10px;">13:10~14:20<br>(70분)</td>
+            <td class="tg-9wq8" colspan="4" style="padding:0px 10px;">영&nbsp;&nbsp;어</td>
         </tr>
         <tr>
-            <td><b>등급</b></td>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
+            <td class="tg-9wq8" rowspan="2">4</td>
+            <td class="tg-9wq8" colspan="2" style="padding:0px 10px;">14:50~15:20<br>(30분)</td>
+            <td class="tg-9wq8" colspan="4" style="padding:0px 10px;">한국사</td>
+        </tr>
+        <tr>
+            <td class="tg-t4zm" colspan="4" rowspan="2">생년월일</td>
+            <td class="tg-9wq8" colspan="2" style="padding:0px 10px;">15:35~16:37<br>(62분)</td>
+            <td class="tg-9wq8" colspan="4" style="padding:0px 10px;">탐구<br>(사회 과학 직업)</td>
+        </tr>
+        <tr>
+            <td class="tg-9wq8">5</td>
+            <td class="tg-9wq8" colspan="2" style="padding:0px 10px;">17:05~17:45<br>(40분)</td>
+            <td class="tg-9wq8" colspan="4" style="padding:0px 10px;">제2외국어/한문</td>
+            <td class="tg-0pky" colspan="4" rowspan="2"></td>
+        </tr>
+        <tr>
+            <td class="tg-t4zm" colspan="4"><span style="font-weight:bold">02.03.07.</span></td>
+            <td class="tg-9wq8" colspan="7">수험생은 08:10(2~5교시는 시험시작 10분전)까지<br>시험실 입실을 완료해야 합니다.</td>
         </tr>
     </table>
 </div>
