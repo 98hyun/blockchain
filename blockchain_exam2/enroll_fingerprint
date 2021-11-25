@@ -1,0 +1,34 @@
+from pyfingerprint.pyfingerprint import PyFingerprint
+import pymysql
+import config
+conn=pymysql.connect(host="192.168.10.113",port=3306,user="ykm",password=config.password,db="hackaton")
+
+try:
+    f=PyFingerprint('/dev/ttyAMA2',57600,0xFFFFFFFF,0x00000000)
+    if(f.verifyPassword()==False):
+        raise ValueError('The given fingerprint sensor password is wrong!')
+    
+except Exception as e:
+    print('The fingerprint sensor could not be initialized!')
+    print('Exception message:'+str(e))
+    exit(1)
+    
+try:
+    print('Wainting for finger')
+    #waiting until reading fingerprint
+    while(f.readImage()==False):
+        pass
+    #Converts read image to characteristics and stores it in charbuffer 1
+    f.convertImage(0x01)
+    characterics=str(f.downloadCharacteristics(0x01)).encode('utf-8')
+    cur=conn.cursor()
+    #save fingerprint into DB, secon and third columns are grade and id
+    sql="insert into finger_template values(%s,%s,%s)"
+    cur.execute(sql,(characterics,'2','number2'))
+    conn.commit()
+except Exception as e:
+    print('operation failed!')
+    print('Exeption message:'+str(e))
+    exit(1)
+finally:
+    conn.close()    

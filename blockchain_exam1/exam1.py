@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import hashlib
 import json
 from time import time
@@ -9,6 +11,8 @@ import pymysql
 import bcrypt
 import config
 from pip._vendor import requests
+
+from pyfingerprint.pyfingerprint import PyFingerprint
 
 from Crypto.PublicKey import RSA
 
@@ -25,7 +29,7 @@ app.config.update(
     # JSONIFY_PRETTYPRINT_REGULAR=True
 )
 
-db = pymysql.connect(host='localhost',port=3306,user='root',passwd=config.password,db='hackaton',charset='utf8') # db 접속 본인 환경맞춰 설정
+db = pymysql.connect(host=config.host,port=3306,user=config.user,passwd=config.password,db=config.db,charset='utf8') # db 접속 본인 환경맞춰 설정
 cursor = db.cursor() # 객체에 담기
 
 
@@ -116,7 +120,7 @@ class Blockchain:
                     "service": [{
                         "id":f"did:example:{id_generator(size=18)}#vcs",
                         "type": "VerifiableCredentialService",
-                        "serviceEndpoint": "http://localhost:5001/verify",
+                        "serviceEndpoint": "http://192.168.219.112:5001/verify",
                         }]
                         }
                         }
@@ -170,12 +174,12 @@ blockchain = Blockchain()
 # 처음 index 시작 ----------------------------------------
 @app.route('/')
 def index():
-    return render_template('bexam.html')
+    return render_template('bexam.html',host=config.host)
 
 # 상단 메뉴바 href ----------------------------------------
 @app.route('/logo_index')
 def logo_index():
-    return render_template('bexam.html')
+    return render_template('bexam.html',host=config.host)
 
 @app.route('/teamplay')
 def teamplay():
@@ -195,28 +199,26 @@ def loginpage():
 
 @app.route('/login' , methods=['POST'])
 def login():
-    db = pymysql.connect(host='localhost',port=3306,user='root',passwd=config.password,db='hackaton',charset='utf8') # db 접속 본인 환경맞춰 설정
+    db = pymysql.connect(host=config.host,port=3306,user=config.user,passwd=config.password,db=config.db,charset='utf8') # db 접속 본인 환경맞춰 설정
     cursor = db.cursor() # 객체에 담기
     if request.method == 'POST':
         login_info = request.form
-        email = login_info['email']
-        password = login_info['password']
+        finger = login_info['finger']
+        # password = login_info['password']
         # print(email + password)
-        sql = "SELECT * FROM Userinfo WHERE email = %s"
-        rows_count = cursor.execute(sql , email)
+        sql = "SELECT * FROM sejong WHERE finger = %s"
+        rows_count = cursor.execute(sql , finger)
         if rows_count > 0:
             user_info = cursor.fetchone() # 일치하는 정보 객체에 담기
-            name = user_info[3] 
-            mile = user_info[7] 
-            is_pw_correct = bcrypt.checkpw(password.encode('UTF-8') , user_info[2].encode('UTF-8')) # 패스워드 맞는지 확인
-            if is_pw_correct: # 일치하게되면
+            name = user_info[2] 
+            mile = user_info[6] 
+            # is_pw_correct = bcrypt.checkpw(password.encode('UTF-8') , user_info[2].encode('UTF-8')) # 패스워드 맞는지 확인
+            # if is_pw_correct: # 일치하게되면
                 # email 이라는 세션을 저장
-                session['name'] = name
-                session['email'] = email
-                session['mile'] = mile
-                return redirect('/exam')
-            else: # 비밀번호가 일치하지 않는다면
-                return redirect('/loginpage')
+            session['name'] = name
+                # session['finger'] = finger
+            session['mile'] = mile
+            return redirect('/exam')
         else:
             print('User does not exist')
             return redirect('/loginpage')
@@ -230,22 +232,105 @@ def logout():
 def regit():
     return render_template('/register.html')
 
+@app.route('/enroll',methods=['POST'])
+def enroll():
+    global characterics
+    conn=pymysql.connect(host=config.host,port=3306,user=config.user,password=config.password,db=config.db)
+
+    try:
+        f=PyFingerprint('/dev/ttyAMA2',57600,0xFFFFFFFF,0x00000000)
+        if(f.verifyPassword()==False):
+            raise ValueError('The given fingerprint sensor password is wrong!')
+        
+    except Exception as e:
+        print('The fingerprint sensor could not be initialized!')
+        print('Exception message:'+str(e))
+        exit(1)
+        
+    try:
+        print('Wainting for finger')
+        #waiting until reading fingerprint
+        while(f.readImage()==False):
+            pass
+        #Converts read image to characteristics and stores it in charbuffer 1
+        f.convertImage(0x01)
+        characterics=str(f.downloadCharacteristics(0x01)).encode('utf-8')
+        cur=conn.cursor()
+        #save fingerprint into DB, secon and third columns are grade and id
+        sql="insert into sejong (finger,name,sex,department,student_number,milegea) values(%s,%s,%s,%s,%s,%s)"
+        cur.execute(sql,(characterics,None,None,None,None,None))
+        conn.commit()
+    except Exception as e:
+        print('operation failed!')
+        print('Exeption message:'+str(e))
+        exit(1)
+    finally:
+        conn.close()    
+
+    return render_template('/register.html',enroll=characterics)
+
+@app.route('/check',methods=['POST'])
+def check():
+    global characterics
+    conn=pymysql.connect(host=config.host,port=3306,user=config.user,password=config.password,db=config.db)
+
+    try:
+        f=PyFingerprint('/dev/ttyAMA2',57600,0xFFFFFFFF,0x00000000)
+        if(f.verifyPassword()==False):
+            raise ValueError('The given fingerprint sensor password is wrong!')
+        
+    except Exception as e:
+        print('The fingerprint sensor could not be initialized!')
+        print('Exception message:'+str(e))
+        exit(1)
+        
+    try:
+        print('Wainting for finger')
+        #waiting until reading fingerprint
+        while(f.readImage()==False):
+            pass
+        #Converts read image to characteristics and stores it in charbuffer 1
+        f.convertImage(0x01)
+        cur=conn.cursor()
+        sql="select*from sejong"
+        cur.execute(sql)
+        for row in cur.fetchall():
+            print(f.uploadCharacteristics(0x02,eval(row[1])))
+            score=f.compareCharacteristics()
+            print(score)
+            if score>60:
+                characterics=row[1]
+    except Exception as e:
+        print('Operation failed!')
+        print('Exception message:' +str(e))
+        exit(1)
+    finally:
+        conn.close()
+    if characterics is not None:
+        return render_template('login.html',check=characterics)
+    else:
+        return render_template('login.html',check='no')
+        
+
 @app.route('/register' , methods=['POST']) # 회원가입부분
 def register():
     if(request.method == 'POST'):
-        register_info = request.form
-        email = register_info['email']
-        hased_password = bcrypt.hashpw(register_info['password'].encode('utf-8') , bcrypt.gensalt())
+        register_info = request.form.to_dict()
+        print("-------------------------")
+        print(register_info)
+        print("-------------------------")
+        finger = register_info['finger']
+        # hased_password = bcrypt.hashpw(register_info['password'].encode('utf-8') , bcrypt.gensalt())
         name = register_info['name']
         department = register_info['department']
         sno = register_info['sno']
         sex = register_info['sex']
         sql = """
-            INSERT INTO Userinfo (email, hashed_password, name, sex, department, student_number) VALUES (%s , %s , %s , %s, %s, %s);
+            INSERT INTO sejong (finger, name, sex, department, student_number) VALUES (%s , %s , %s, %s, %s);
         """
         # 아이디 겹치면 try 구문 사용해서 오류 반환해주기 ... 구현해야함
         # cursor.execute(sql , (username , hased_password, email , department)) # sql 실행
-        cursor.execute(sql , (email , hased_password , name , sex, department, sno))
+        cursor.execute(sql , (finger, name , sex, department, sno))
         db.commit() #데이터 삽입 , 삭제 등의 구문에선 commit 해주어야함
         db.close() # 연결 해제        return redirect(request.url)
     return render_template('/login.html')
@@ -376,7 +461,7 @@ def seoul():
 # 발급완료 페이지
 @app.route('/issuance')
 def issuance():
-    return render_template('issuance.html',blockchain=json.dumps(blockchain.chain[-1],sort_keys = True, indent = 4, separators = (',', ': ')))
+    return render_template('issuance.html',blockchain=json.dumps(blockchain.chain[-1],sort_keys = True, indent = 4, separators = (',', ': ')),host=config.host)
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
@@ -388,5 +473,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
     port = args.port
 
-    app.run(host='127.0.0.1', port=port,debug=True)
+    app.run(host=config.host,port=port,debug=True)
 #---------------------------------------------------------

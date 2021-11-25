@@ -17,12 +17,21 @@
         <!-- 로그인 폼-->
         <div class="container">     
             <form action='/login' name='login' method='POST' style="width:40%; margin: 0 auto;">    
-                <label class="w3-xlarge"><b>아이디</b></label>
-                <input class="w3-input w3-border w3-round-xxlarge" type="text" name="email" placeholder="ID">
+                <label class="w3-xlarge"><b>지문 아이디</b></label>
+                <button formaction="/check" method='POST'>
+                    지문확인
+                </button>
+                {% if "no" in check %}
+                <input class="w3-input w3-border w3-round-xxlarge" type="text" name="finger" placeholder="지문없음">
+                {% elif check %}
+                <input class="w3-input w3-border w3-round-xxlarge" type="text" name="finger" value="{{check}}">
+                {% else %}
+                <input class="w3-input w3-border w3-round-xxlarge" type="text" name="finger" placeholder="다시입력">
+                {% endif %}
                 <br>
-                <label class="w3-xlarge"><b>비밀번호</b></label>
+                <!--<label class="w3-xlarge"><b>비밀번호</b></label>
                 <input class="w3-input w3-border w3-round-xxlarge" type="password" name="password" placeholder="PASSWORD">
-                <br><br>
+                <br><br>-->
 
                 <!-- 버튼-->
                 <input class="myinput" type="submit" value="로그인">

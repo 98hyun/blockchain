@@ -1,0 +1,37 @@
+from pyfingerprint.pyfingerprint import PyFingerprint
+import pymysql
+import config
+conn=pymysql.connect(host=config.host,port=3306,user=config.user,password=config.password,db=config.db)
+
+try:
+    f=PyFingerprint('/dev/ttyAMA2',57600,0xFFFFFFFF,0x00000000)
+    if(f.verifyPassword()==False):
+        raise ValueError('The given fingerprint sensor password is wrong!')
+    
+except Exception as e:
+    print('The fingerprint sensor could not be initialized!')
+    print('Exception message:'+str(e))
+    exit(1)
+    
+try:
+    print('Wainting for finger')
+    #waiting until reading fingerprint
+    while(f.readImage()==False):
+        pass
+    #Converts read image to characteristics and stores it in charbuffer 1
+    f.convertImage(0x01)
+    cur=conn.cursor()
+    sql="select*from finger_template"
+    cur.execute(sql)
+    for row in cur.fetchall():
+        print(f.uploadCharacteristics(0x02,eval(row[0])))
+        score=f.compareCharacteristics()
+        print(score)
+except Exception as e:
+    print('Operation failed!')
+    print('Exception message:' +str(e))
+    exit(1)
+finally:
+    conn.close()
+    
+             

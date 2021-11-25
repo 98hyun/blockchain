@@ -11,18 +11,26 @@
 <section class="page-section text-center" style="padding:4rem;">
     <!-- 아이콘-->
     <div class="container" style="font-size : 2rem;">
-        <img src="static/assets/img/mainlogo.png" style="width:13%; height:13%">
+        <img src="static/assets/img/exammainlogo.png" style="width:13%; height:13%">
     </div>
     <br>
     <!-- 로그인 폼-->
     <div class="container">
         <form action='/register' name='login' method='POST' style="width:40%; margin: 0 auto;">
-            <label class="w3-xlarge"><b>이메일</b></label>
-            <input class="w3-input w3-border w3-round-xxlarge" type="text" name="email" placeholder="E-mail">
+            <label class="w3-xlarge"><b>지문아이디</b></label>
+            <button formaction="/enroll" method='POST'>
+                지문등록
+            </button>
+
+            {% if enroll %}
+            <input class="w3-input w3-border w3-round-xxlarge" type="text" name="finger" value="{{ enroll }}">
+            {% else %}
+            <input class="w3-input w3-border w3-round-xxlarge" type="text" name="finger" placeholder="ID">
+            {% endif %}
             <br>
-            <label class="w3-xlarge"><b>비밀번호</b></label>
+            <!--<label class="w3-xlarge"><b>비밀번호</b></label>
             <input class="w3-input w3-border w3-round-xxlarge" type="password" name="password" placeholder="Password">
-            <br>
+            <br>-->
             <label class="w3-xlarge"><b>이름</b></label><br>
             <input class="w3-input w3-border w3-round-xxlarge" type="text" name="name" placeholder="Name">
             <br>
