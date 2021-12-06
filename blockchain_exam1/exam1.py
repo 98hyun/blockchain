@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
 import hashlib
+import math
 import json
 from time import time
 from urllib.parse import urlparse
 from uuid import uuid4
 
-from flask import Flask, render_template, request, redirect, jsonify, session, url_for, json
+from flask import Flask, render_template, request, redirect, jsonify, session, url_for, json, flash
 import pymysql
 import bcrypt
 import config
@@ -14,7 +15,66 @@ from pip._vendor import requests
 
 from pyfingerprint.pyfingerprint import PyFingerprint
 
-from Crypto.PublicKey import RSA
+# from Crypto.PublicKey import RSA
+# from Crypto.Random import get_random_bytes
+# from Crypto.Cipher import AES, PKCS1_OAEP
+
+def private_key(fp_data):
+    fp_data=bytes(fp_data,'utf-8')
+    #지문데이터에대해서 해시함수 적용
+    h=hashlib.sha256(fp_data).digest()
+    #바이트 배열에 저장된 데이터를 16진수 문자열로 변환
+    key = ''.join('{:02x}'.format(y)for y in h)
+    return key
+
+def addOperation(a, b, p, q, m):
+    if q == (math.inf, math.inf):
+        return p
+    
+    x1 = p[0]
+    y1 = p[1]
+    x2 = q[0]
+    y2 = q[1]
+    
+    if p == q:
+        # Doubling
+        # slope (s) = (3 * x1 ^ 2 + a) / (2 * y1) mod m
+        # 분모의 역원부터 계산한다 (by Fermat's Little Theorem)
+        # pow() 함수가 내부적으로 Square-and-Multiply 알고리즘을 수행한다.
+        r = 2 * y1
+        rInv = pow(r, m-2, m)   # Fermat's Little Theorem
+        s = (rInv * (3 * (x1 ** 2) + a)) % m
+    else:
+        r = x2 - x1
+        rInv = pow(r, m-2, m)   # Fermat's Little Theorem
+        s = (rInv * (y2 - y1)) % m
+    x3 = (s ** 2 - x1 - x2) % m
+    y3 = (s * (x1 - x3) - y1) % m
+    return x3, y3
+
+def public_key(pk):
+    d=int(pk,16)
+    bits = bin(d)
+    bits = bits[2:len(bits)]
+
+    K=G
+
+    bits = bits[1:len(bits)]
+    for bit in bits:
+        #Double
+        K=addOperation(a,b,K,K,m) 
+
+        #Mulitply
+        if bit=='1':
+            K=addOperation(a,b,K,G,m)
+    return K
+
+a = 0
+b = 7
+m = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
+G = (0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798,
+     0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8)
+n = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
 
 import string
 import random
@@ -29,8 +89,6 @@ app.config.update(
     # JSONIFY_PRETTYPRINT_REGULAR=True
 )
 
-db = pymysql.connect(host=config.host,port=3306,user=config.user,passwd=config.password,db=config.db,charset='utf8') # db 접속 본인 환경맞춰 설정
-cursor = db.cursor() # 객체에 담기
 
 
 class Blockchain:
@@ -93,15 +151,9 @@ class Blockchain:
             return True
         return False
 
-    def new_block(self, proof, previous_hash, public_key=None):
+    def new_block(self, proof, previous_hash, public_key=None, data=None):
         
-        block = {
-                    'index': len(self.chain) + 1,
-                    'timestamp': time(),
-                    'transactions': self.current_transactions,
-                    'proof': proof,
-                    'previous_hash': previous_hash or self.hash(self.chain[-1]),
-                }
+        
         if public_key is not None:
             block = {
                 'index': len(self.chain) + 1,
@@ -109,27 +161,20 @@ class Blockchain:
                 'transactions': self.current_transactions,
                 'proof': proof,
                 'previous_hash': previous_hash or self.hash(self.chain[-1]),
-                'did': {
-                    "@context": "http://www.w3.org/ns/did/v1",
-                    "id": f"did:example:{id_generator(size=18)}",
-                    "authentication": [{
-                        "id": f"did:example:{id_generator(size=18)}#keys-{len(self.chain) + 1}",
-                        "type": f"{id_generator(size=6)}VerificationKey2021",
-                        "publicKey": f"{str(public_key)}"
-                        }],
-                    "service": [{
-                        "id":f"did:example:{id_generator(size=18)}#vcs",
-                        "type": "VerifiableCredentialService",
-                        "serviceEndpoint": "http://192.168.219.112:5001/verify",
-                        }]
-                        }
-                        }
-
+                }
+        else:
+            block = {
+                    'index': len(self.chain) + 1,
+                    'timestamp': time(),
+                    'transactions': self.current_transactions,
+                    'proof': proof,
+                    'previous_hash': previous_hash or self.hash(self.chain[-1]),
+                }
         self.current_transactions = [] 
         self.chain.append(block)
         return block
     
-    def new_transaction(self, sender, recipient, amount, public_key):
+    def new_transaction(self, sender, recipient, amount, public_key,did=None,data=None,personal=None):
         ## http://wiki.hash.kr/index.php/DIDs
 
         self.current_transactions.append({
@@ -137,6 +182,9 @@ class Blockchain:
                     'recipient': recipient,
                     'amount': amount,
                     'public_key':str(public_key),
+                    'did':did,
+                    'data':data,
+                    'personal':personal
                 })
         return self.last_block['index'] + 1
 
@@ -206,22 +254,32 @@ def login():
         finger = login_info['finger']
         # password = login_info['password']
         # print(email + password)
-        sql = "SELECT * FROM sejong WHERE finger = %s"
+        sql = "SELECT * FROM exam WHERE finger = %s"
         rows_count = cursor.execute(sql , finger)
         if rows_count > 0:
             user_info = cursor.fetchone() # 일치하는 정보 객체에 담기
             name = user_info[2] 
-            mile = user_info[6] 
+            # mile = user_info[6] 
             # is_pw_correct = bcrypt.checkpw(password.encode('UTF-8') , user_info[2].encode('UTF-8')) # 패스워드 맞는지 확인
             # if is_pw_correct: # 일치하게되면
                 # email 이라는 세션을 저장
             session['name'] = name
-                # session['finger'] = finger
-            session['mile'] = mile
+            session['finger'] = finger
+            session['resident']=user_info[3]
+            session['high'] = user_info[4]
+            session['korean'] = user_info[5]
+            session['math']=user_info[6]
+            session['select1'] = user_info[7]
+            session['select2']=user_info[8]
+            
+            # session['mile'] = mile
+            db.close()
             return redirect('/exam')
         else:
-            print('User does not exist')
+            db.close()
+            flash('User does not exist')
             return redirect('/loginpage')
+
 
 @app.route('/logout')
 def logout():
@@ -254,12 +312,12 @@ def enroll():
             pass
         #Converts read image to characteristics and stores it in charbuffer 1
         f.convertImage(0x01)
-        characterics=str(f.downloadCharacteristics(0x01)).encode('utf-8')
-        cur=conn.cursor()
+        characterics=str(f.downloadCharacteristics(0x01))
+        # cur=conn.cursor()
         #save fingerprint into DB, secon and third columns are grade and id
-        sql="insert into sejong (finger,name,sex,department,student_number,milegea) values(%s,%s,%s,%s,%s,%s)"
-        cur.execute(sql,(characterics,None,None,None,None,None))
-        conn.commit()
+        # sql="insert into sejong (finger,name,sex,department,student_number,milegea) values(%s,%s,%s,%s,%s,%s)"
+        # cur.execute(sql,(str(characterics),None,None,None,None,None))
+        # conn.commit()
     except Exception as e:
         print('operation failed!')
         print('Exeption message:'+str(e))
@@ -292,7 +350,7 @@ def check():
         #Converts read image to characteristics and stores it in charbuffer 1
         f.convertImage(0x01)
         cur=conn.cursor()
-        sql="select*from sejong"
+        sql="select*from exam"
         cur.execute(sql)
         for row in cur.fetchall():
             print(f.uploadCharacteristics(0x02,eval(row[1])))
@@ -306,14 +364,16 @@ def check():
         exit(1)
     finally:
         conn.close()
-    if characterics is not None:
+    try:
         return render_template('login.html',check=characterics)
-    else:
-        return render_template('login.html',check='no')
-        
-
+    except:
+        return render_template('login.html')
+         
 @app.route('/register' , methods=['POST']) # 회원가입부분
 def register():
+    db = pymysql.connect(host=config.host,port=3306,user=config.user,passwd=config.password,db=config.db,charset='utf8') # db 접속 본인 환경맞춰 설정
+    cursor = db.cursor() # 객체에 담기
+
     if(request.method == 'POST'):
         register_info = request.form.to_dict()
         print("-------------------------")
@@ -322,15 +382,18 @@ def register():
         finger = register_info['finger']
         # hased_password = bcrypt.hashpw(register_info['password'].encode('utf-8') , bcrypt.gensalt())
         name = register_info['name']
-        department = register_info['department']
-        sno = register_info['sno']
-        sex = register_info['sex']
+        resident = register_info['resident']
+        high = register_info['high']
+        korean = register_info['korean']
+        math = register_info['math']
+        select1 = register_info['select1']
+        select2 = register_info['select2']
         sql = """
-            INSERT INTO sejong (finger, name, sex, department, student_number) VALUES (%s , %s , %s, %s, %s);
+            INSERT INTO exam (finger, name, resident, high, korean, math, select1, select2) VALUES (%s , %s , %s, %s, %s, %s, %s, %s);
         """
         # 아이디 겹치면 try 구문 사용해서 오류 반환해주기 ... 구현해야함
         # cursor.execute(sql , (username , hased_password, email , department)) # sql 실행
-        cursor.execute(sql , (finger, name , sex, department, sno))
+        cursor.execute(sql , (finger, name, resident, high, korean, math, select1, select2))
         db.commit() #데이터 삽입 , 삭제 등의 구문에선 commit 해주어야함
         db.close() # 연결 해제        return redirect(request.url)
     return render_template('/login.html')
@@ -353,27 +416,46 @@ def mine():
     last_block = blockchain.last_block
     proof = blockchain.proof_of_work(last_block)
     
-    key = RSA.generate(2048)
-    private_key = key.export_key()
-    file_out = open(f"../private/{session['name']}_private.pem", "wb")
-    file_out.write(private_key)
-    file_out.close()
-
-    public_key = key.publickey().export_key()
-    file_out = open(f"../public/{session['name']}_receiver.pem", "wb")
-    file_out.write(public_key)
-    file_out.close()
-
+    pk=private_key(session['finger'])
+    pubKey = public_key(pk)
+    # print(type(encrypted_msg))
     ## new_transaction 고치기
+    
+    did={
+            "@context": "http://www.w3.org/ns/did/v1",
+            "id": f"did:example:{id_generator(size=18)}",
+            "authentication": [{
+                "id": f"did:example:{id_generator(size=18)}#keys-{len(blockchain.chain) + 1}",
+                "type": f"{id_generator(size=6)}VerificationKey2021",
+                "publicKey": f"{pubKey[1]}"
+                }],
+            "service": [{
+                "id":f"did:example:{id_generator(size=18)}#vcs",
+                "type": "VerifiableCredentialService",
+                "serviceEndpoint": f"http://{config.host}:5001/verify",
+                }]}
+    
+    personal={
+        "name":session['name'],
+        "resident":session['resident'],
+        "high":session['high'],
+        "korean":session["korean"],
+        "math":session["math"],
+        "select1":session["select1"],
+        "select2":session["select2"]
+    }
     blockchain.new_transaction(
         sender=f"{session['name']}",
         recipient=node_identifier,
         amount=1,
-        public_key=str(public_key),
+        public_key=pubKey[1],
+        did=did,
+        data=pubKey[0],
+        personal=personal
     )
-
+    
     previous_hash = blockchain.hash(last_block)
-    block = blockchain.new_block(proof, previous_hash, public_key)
+    block = blockchain.new_block(proof, previous_hash, pubKey[1], pubKey[0])
     
     ## response 고치기
     response = {
@@ -388,7 +470,9 @@ def mine():
 
 @app.route('/transactions/new')
 def new_transaction():
-    db.ping()
+    db = pymysql.connect(host=config.host,port=3306,user=config.user,passwd=config.password,db=config.db,charset='utf8') # db 접속 본인 환경맞춰 설정
+    cursor = db.cursor() # 객체에 담기
+
     values = {
         'sender' : '안재현' , 
         'recipient' : '강홍구' , 
@@ -396,6 +480,8 @@ def new_transaction():
     }
     cursor.execute("update userinfo set milegea = 180 where id = 3")
     cursor.execute("update userinfo set milegea = 620 where id = 5")
+    db.commit()
+    db.close()
     required = ['sender', 'recipient', 'amount']
 
     if not all(k in values for k in required):

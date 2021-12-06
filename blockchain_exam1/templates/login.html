@@ -7,6 +7,10 @@
         </div>
     </section>
 
+    {% for message in get_flashed_messages() %}
+    <h2>{{ message }}</h2>
+    {% endfor %}
+
     <!-- 로그인 섹션 -->
     <section class="page-section text-center" style="padding:4rem;">
         <!-- 아이콘-->
@@ -21,12 +25,10 @@
                 <button formaction="/check" method='POST'>
                     지문확인
                 </button>
-                {% if "no" in check %}
-                <input class="w3-input w3-border w3-round-xxlarge" type="text" name="finger" placeholder="지문없음">
-                {% elif check %}
-                <input class="w3-input w3-border w3-round-xxlarge" type="text" name="finger" value="{{check}}">
+                {% if check %}
+                <input class="w3-input w3-border w3-round-xxlarge" type="password" name="finger" value="{{check}}">
                 {% else %}
-                <input class="w3-input w3-border w3-round-xxlarge" type="text" name="finger" placeholder="다시입력">
+                <input class="w3-input w3-border w3-round-xxlarge" type="password" name="finger" placeholder="다시입력">
                 {% endif %}
                 <br>
                 <!--<label class="w3-xlarge"><b>비밀번호</b></label>

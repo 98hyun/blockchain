@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
+from argparse import _MutuallyExclusiveGroup
 import hashlib
+import math
 import json
 from time import time
 from urllib.parse import urlparse
@@ -11,12 +13,72 @@ import pymysql
 import bcrypt
 import config
 from pip._vendor import requests
+from bs4 import BeautifulSoup
+import json
 
 from pyfingerprint.pyfingerprint import PyFingerprint
 
-from Crypto.PublicKey import RSA
-from Crypto.Random import get_random_bytes
-from Crypto.Cipher import AES, PKCS1_OAEP
+# from Crypto.PublicKey import RSA
+# from Crypto.Random import get_random_bytes
+# from Crypto.Cipher import AES, PKCS1_OAEP
+
+def private_key(fp_data):
+    fp_data=bytes(fp_data,'utf-8')
+    #지문데이터에대해서 해시함수 적용
+    h=hashlib.sha256(fp_data).digest()
+    #바이트 배열에 저장된 데이터를 16진수 문자열로 변환
+    key = ''.join('{:02x}'.format(y)for y in h)
+    return key
+
+def addOperation(a, b, p, q, m):
+    if q == (math.inf, math.inf):
+        return p
+    
+    x1 = p[0]
+    y1 = p[1]
+    x2 = q[0]
+    y2 = q[1]
+    
+    if p == q:
+        # Doubling
+        # slope (s) = (3 * x1 ^ 2 + a) / (2 * y1) mod m
+        # 분모의 역원부터 계산한다 (by Fermat's Little Theorem)
+        # pow() 함수가 내부적으로 Square-and-Multiply 알고리즘을 수행한다.
+        r = 2 * y1
+        rInv = pow(r, m-2, m)   # Fermat's Little Theorem
+        s = (rInv * (3 * (x1 ** 2) + a)) % m
+    else:
+        r = x2 - x1
+        rInv = pow(r, m-2, m)   # Fermat's Little Theorem
+        s = (rInv * (y2 - y1)) % m
+    x3 = (s ** 2 - x1 - x2) % m
+    y3 = (s * (x1 - x3) - y1) % m
+    return x3, y3
+
+def public_key(pk):
+    d=int(pk,16)
+    bits = bin(d)
+    bits = bits[2:len(bits)]
+
+    K=G
+
+    bits = bits[1:len(bits)]
+    for bit in bits:
+        #Double
+        K=addOperation(a,b,K,K,m) 
+
+        #Mulitply
+        if bit=='1':
+            K=addOperation(a,b,K,G,m)
+    return K
+
+a = 0
+b = 7
+m = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
+G = (0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798,
+     0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8)
+n = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+
 
 db = pymysql.connect(host=config.host,port=3306,user=config.user,passwd=config.password,db=config.db,charset='utf8') # db 접속 본인 환경맞춰 설정
 cursor = db.cursor() # 객체에 담기
@@ -169,71 +231,63 @@ def loginpage():
 @app.route('/login' , methods=['POST'])
 def login():
     global characterics
+    global pubKey
     db = pymysql.connect(host=config.host,port=3306,user=config.user,passwd=config.password,db=config.db,charset='utf8') # db 접속 본인 환경맞춰 설정
     cursor = db.cursor() # 객체에 담기
     if request.method == 'POST':
         login_info = request.form
         finger = login_info['finger']
         # password = login_info['password']
-        sql = "SELECT * FROM sejong WHERE finger = %s"
+        sql = "SELECT * FROM exam WHERE finger = %s"
         rows_count = cursor.execute(sql , finger)
         if rows_count > 0:
             user_info = cursor.fetchone() # 일치하는 정보 객체에 담기
             name = user_info[2] 
-            mile = user_info[6] 
+            resident=user_info[3].split('-')[0]
+            # mile = user_info[6] 
+            korean=user_info[5]
+            math=user_info[6]
+            select1=user_info[7]
+            select2=user_info[8]
             session['name'] = name
-            # session['email'] = email
-            session['mile'] = mile
+            session['finger'] = finger
+            session['resident']=resident
+            session['korean']=korean
+            session['math']=math
+            session['select1']=select1
+            session['select2']=select2
+            # session['mile'] = mile                
+         
+        try:       
+            url=f'http://{config.host}:5000/chain'
             
-            data = "I met aliens in UFO. Here is the map.".encode("utf-8")
-            # data는 나중에 user_info에 모든 문자열들을 합친것으로 대체 해도 괜찮을 것 같다.
-            # temp의 역할은 개인 단말의 찌꺼기 폴더
-            file_out = open(f"../temp/{session['name']}_encrypted_data.bin", "wb")
-
-            recipient_key = RSA.import_key(open(f"../public/{session['name']}_receiver.pem").read())
-            session_key = get_random_bytes(16)
-
-            # Encrypt the session key with the public RSA key
-            cipher_rsa = PKCS1_OAEP.new(recipient_key)
-            enc_session_key = cipher_rsa.encrypt(session_key)
-
-            # Encrypt the data with the AES session key
-            cipher_aes = AES.new(session_key, AES.MODE_EAX)
-            ciphertext, tag = cipher_aes.encrypt_and_digest(data)
-            [ file_out.write(x) for x in (enc_session_key, cipher_aes.nonce, tag, ciphertext) ]
-            file_out.close()        
-
-            file_in = open(f"../temp/{session['name']}_encrypted_data.bin", "rb")
-
-            private_key = RSA.import_key(open(f"../private/{session['name']}_private.pem").read())
-
-            enc_session_key, nonce, tag, ciphertext = \
-            [ file_in.read(x) for x in (private_key.size_in_bytes(), 16, 16, -1) ]
-
-            # Decrypt the session key with the private RSA key
-            cipher_rsa = PKCS1_OAEP.new(private_key)
-            session_key = cipher_rsa.decrypt(enc_session_key)
-
-            # Decrypt the data with the AES session key
-            cipher_aes = AES.new(session_key, AES.MODE_EAX, nonce)
-            data2 = cipher_aes.decrypt_and_verify(ciphertext, tag)
-            # if data==data2:
-            #     print('verify')
-            # else:
-            #     print('denied')
-                # print(data.decode("utf-8"))
-
-            # is_pw_correct = bcrypt.checkpw(password.encode('UTF-8') , user_info[2].encode('UTF-8')) # 패스워드 맞는지 확인
-            if data==data2: # 일치하게되면
-                # email 이라는 세션을 저장
-                
-                flash('verify!')
-                return redirect('/verify')
-            else: # 비밀번호가 일치하지 않는다면
-                flash('denied!')
-                return redirect('/loginpage')
+            res=requests.get(url)
+            res.raise_for_status()
+            
+            soup=BeautifulSoup(res.text,'html.parser')
+            chain=json.loads(soup.text)
+            for block in chain['chain'][::-1]:
+                # print(block['transactions'][0]['sender'])
+                if block['transactions'][0]['sender']==name:
+                    print(block['transactions'][0]['sender'])
+                    pubKey=int(block['transactions'][0]['public_key'])
+                    encrypted_msg=block['transactions'][0]['data']
+                    break
+            pk=private_key(finger)
+            
+        except:
+            # 검증이 안됐다면
+            db.close()
+            flash('Not Verified!')
+            return redirect('/loginpage')
+        # is_pw_correct = bcrypt.checkpw(password.encode('UTF-8') , user_info[2].encode('UTF-8')) # 패스워드 맞는지 확인
+        if public_key(pk)[1]==pubKey: # 일치하게되면
+            db.close() 
+            flash('verify!')
+            return redirect('/verify')
         else:
-            print('User does not exist')
+            db.close()
+            flash('Not Verified!')
             return redirect('/loginpage')
 
 @app.route('/logout')
@@ -373,7 +427,26 @@ def consensus():
 
 @app.route('/verify')
 def verify():
-    return render_template('verify.html',data=session,host=config.host)
+    url=f'http://{config.host}:5000/chain'
+            
+    res=requests.get(url)
+    res.raise_for_status()
+    
+    soup=BeautifulSoup(res.text,'html.parser')
+    chain=json.loads(soup.text)
+    for block in chain['chain'][::-1]:
+        # print(block['transactions'][0]['sender'])
+        
+        if block['transactions'][0]['sender']==session['name']:
+            name=block['transactions'][0]['personal']['name']
+            resident=str(block['transactions'][0]['personal']['resident']).split('-')[0]
+            korean=block['transactions'][0]['personal']['korean']
+            math=block['transactions'][0]['personal']['math']
+            select1=block['transactions'][0]['personal']['select1']
+            select2=block['transactions'][0]['personal']['select2']
+            break
+            
+    return render_template('verify.html',name=name,host=config.host,resident=resident,korean=korean,math=math,select1=select1,select2=select2)
 
 @app.route('/check',methods=['POST'])
 def check():
@@ -396,13 +469,15 @@ def check():
             pass
         #Converts read image to characteristics and stores it in charbuffer 1
         f.convertImage(0x01)
+        characterics=str(f.downloadCharacteristics(0x01))
         cur=conn.cursor()
-        sql="select*from sejong"
+        sql="select*from exam"
         cur.execute(sql)
         for row in cur.fetchall():
+            # print(str.encode(row[1]))
             print(f.uploadCharacteristics(0x02,eval(row[1])))
             score=f.compareCharacteristics()
-            print(score)
+            # print(type(score))
             if score>60:
                 characterics=row[1]
     except Exception as e:
@@ -411,10 +486,11 @@ def check():
         exit(1)
     finally:
         conn.close()
-    if characterics is not None:
+    try:
         return render_template('login.html',check=characterics)
-    else:
-        return render_template('login.html',check='no')
+    except:
+        flash('잘못입력하셨습니다.')
+        return render_template('login.html')
 
 if __name__ == '__main__':
     from argparse import ArgumentParser

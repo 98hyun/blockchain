@@ -23,9 +23,9 @@
             </button>
 
             {% if enroll %}
-            <input class="w3-input w3-border w3-round-xxlarge" type="text" name="finger" value="{{ enroll }}">
+            <input class="w3-input w3-border w3-round-xxlarge" type="password" name="finger" value="{{ enroll }}" placeholder="등록됐습니다.">
             {% else %}
-            <input class="w3-input w3-border w3-round-xxlarge" type="text" name="finger" placeholder="ID">
+            <input class="w3-input w3-border w3-round-xxlarge" type="password" name="finger" placeholder="입력해주세요.">
             {% endif %}
             <br>
             <!--<label class="w3-xlarge"><b>비밀번호</b></label>
@@ -34,15 +34,64 @@
             <label class="w3-xlarge"><b>이름</b></label><br>
             <input class="w3-input w3-border w3-round-xxlarge" type="text" name="name" placeholder="Name">
             <br>
-            <label class="w3-xlarge"><b>학과</b></label><br>
-            <input class="w3-input w3-border w3-round-xxlarge" type="text" name="department" placeholder="Department">
+            <label class="w3-xlarge"><b>주민번호</b></label><br>
+            <input class="w3-input w3-border w3-round-xxlarge" type="text" name="resident" placeholder="resident">
             <br>
-            <label class="w3-xlarge"><b>학번</b></label>
-            <input class="w3-input w3-border w3-round-xxlarge" type="text" name="sno" placeholder="Student Number">
+            <label class="w3-xlarge"><b>출신고교</b></label>
+            <input class="w3-input w3-border w3-round-xxlarge" type="text" name="high" placeholder="high school">
             <br>
-            <label class="w3-xlarge"><b>성별</b></label><br><br>
-            <input class="w3-radio" type="radio" name="sex" value = "남성" checked = "checked"><label class="w3-large">&nbsp;남자</label>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-            <input class="w3-radio" type="radio" name="sex" value = "여성" ><label class="w3-large">&nbsp;여자</label>
+            <label class="w3-xlarge"><b>국어선택</b></label><br><br>
+            <input class="w3-radio" type="radio" name="korean" value = "화법과 작문" checked = "checked"><label class="w3-large">&nbsp;화법과 작문</label>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <input class="w3-radio" type="radio" name="korean" value = "언어와 매체" ><label class="w3-large">&nbsp;언어와 매체</label>
+            <br>
+            <label class="w3-xlarge"><b>수학선택</b></label><br><br>
+            <input class="w3-radio" type="radio" name="math" value = "확률과 통계" checked = "checked"><label class="w3-large">&nbsp;확률과 통계</label>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <input class="w3-radio" type="radio" name="math" value = "미분과 적분" ><label class="w3-large">&nbsp;미분과 적분</label>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <input class="w3-radio" type="radio" name="math" value = "기하와 벡터" ><label class="w3-large">&nbsp;기하와 벡터</label>
+            <br><br>
+            <label class="w3-xlarge" for="select1">탐구1</label>
+                <select name="select1" id="select1">
+                    <option value="물리Ⅰ">물리Ⅰ</option>
+                    <option value="물리Ⅱ">물리Ⅱ</option>
+                    <option value="화학Ⅰ">화학Ⅰ</option>
+                    <option value="화학Ⅱ">화학Ⅱ</option>
+                    <option value="생명과학Ⅰ">생명과학Ⅰ</option>
+                    <option value="생명과학Ⅱ">생명과학Ⅱ</option>
+                    <option value="지구과학Ⅰ">지구과학Ⅰ</option>
+                    <option value="지구과학Ⅱ">지구과학Ⅱ</option>
+                    <option value="생활과윤리">생활과윤리</option>
+                    <option value="사회문화">사회문화</option>
+                    <option value="한국지리">한국지리</option>
+                    <option value="세계지리">세계지리</option>
+                    <option value="윤리와사상">윤리와사상</option>
+                    <option value="동아시아사">동아시아사</option>
+                    <option value="법과정치">법과정치</option>
+                    <option value="세계사">세계사</option>
+                    <option value="경제">경제</option>
+                </select>
+                <br>
+            <label class="w3-xlarge" for="select2">탐구2</label>
+                <select name="select2" id="select2">
+                    <option value="물리Ⅰ">물리Ⅰ</option>
+                    <option value="물리Ⅱ">물리Ⅱ</option>
+                    <option value="화학Ⅰ">화학Ⅰ</option>
+                    <option value="화학Ⅱ">화학Ⅱ</option>
+                    <option value="생명과학Ⅰ">생명과학Ⅰ</option>
+                    <option value="생명과학Ⅱ">생명과학Ⅱ</option>
+                    <option value="지구과학Ⅰ">지구과학Ⅰ</option>
+                    <option value="지구과학Ⅱ">지구과학Ⅱ</option>
+                    <option value="생활과윤리">생활과윤리</option>
+                    <option value="사회문화">사회문화</option>
+                    <option value="한국지리">한국지리</option>
+                    <option value="세계지리">세계지리</option>
+                    <option value="윤리와사상">윤리와사상</option>
+                    <option value="동아시아사">동아시아사</option>
+                    <option value="법과정치">법과정치</option>
+                    <option value="세계사">세계사</option>
+                    <option value="경제">경제</option>
+                </select>
+
+
             <br><br><br>
             <input class="myinput" type="submit" value="회원가입">
         </form>
